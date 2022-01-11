@@ -7,10 +7,10 @@ library(tidyverse)
 
 # Extract data
 
-CENSUS_DATA <- fread("Data Processing/co-est2019-alldata.csv",select=c(6,7,19))
-COVID_DATA <- fread("Data Processing/covidCasesByCounty.csv")
-MASK_USAGE <- fread("Data Processing/maskUsageByCounty.csv")
-FIPS_CODES <- fread("Data Processing/FIPS Codes.csv")
+CENSUS_DATA <- fread("Working Data/Data Processing/co-est2019-alldata.csv",select=c(6,7,19))
+COVID_DATA <- fread("Working Data/Data Processing/covidCasesByCounty.csv")
+MASK_USAGE <- fread("Working Data/Data Processing/maskUsageByCounty.csv")
+FIPS_CODES <- fread("Working Data/Data Processing/FIPS Codes.csv")
 
 
 # Rename columns, clean/normalize data, then merge into one data frame using an inner join
@@ -45,9 +45,18 @@ TRANSFORMED_DATA1 <- merge(FIPS_CODES,CENSUS_DATA,by=c("County","State"))
 TRANSFORMED_DATA2 <- merge(TRANSFORMED_DATA1,MASK_USAGE,by="FIPS Code")
 TRANSFORMED_DATA3 <- merge(TRANSFORMED_DATA2,COVID_DATA,by=c("FIPS Code","County"))
 
+# Finally we want to calculate proportion of infection and deaths per county, then we can drop the population column
+# This normalizes the infections and deaths across the rows to account for difference in population between counties
+TRANSFORMED_DATA3$'Confirmed Cases' <- TRANSFORMED_DATA3$'Confirmed Cases'/TRANSFORMED_DATA3$Population
+TRANSFORMED_DATA3$Deaths <- TRANSFORMED_DATA3$Deaths / TRANSFORMED_DATA3$Population
 
+TRANSFORMED_DATA3<- subset(TRANSFORMED_DATA3,select=c(-4))
+
+# Rename the columns to appropraite names
+
+names(TRANSFORMED_DATA3)[5] <- "Infection Proportion"
+names(TRANSFORMED_DATA3)[6] <- "Death Proportion"
 # Export the data to CSV
 
-write.csv(TRANSFORMED_DATA3,"Project Data.csv",row.names = TRUE)
-
+write.csv(TRANSFORMED_DATA3,"Working Data/Transformed Data.csv",row.names = FALSE)
 quit()
