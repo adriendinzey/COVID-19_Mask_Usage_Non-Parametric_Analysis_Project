@@ -3,7 +3,7 @@ A project uses Non-Parametric Statistical methods to determine what relationship
 
 This project was created for the course STAT 3380 at the University of Manitoba and is yet to be graded.
 
-### Dataset Used:
+### Datasets Used:
 - County Population Totals: 2010-2019
     - Published by the United States Census Bureau
     - (Link to data) https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html
