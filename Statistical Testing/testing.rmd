@@ -1,0 +1,12 @@
+---
+title: "COVID-19 vs Mask Usage Analysis"
+author: "Adrien Dinzey"
+date: "01/11/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(tidyverse)
+```
+
