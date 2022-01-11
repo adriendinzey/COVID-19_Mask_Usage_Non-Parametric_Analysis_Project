@@ -4,9 +4,174 @@ author: "Adrien Dinzey"
 date: "01/11/2021"
 output: pdf_document
 ---
-
-```{r setup, include=FALSE}
+## Set-up
+```{r setup}
 library(data.table)
 library(tidyverse)
+library(ggplot2)
+library(randtests)
 ```
 
+## Load Data
+
+```{r}
+df <- fread("Working Data/Transformed Data.csv")
+```
+
+## Analysis
+
+### Graphs
+First we will split the data into two populations, one is the high-mask usage population and the other is the low-mask usage population.
+
+We will say "low-mask usage" is anything below what we ranked as "Frequently" in the original data.
+If a county on average frequently used masks then they would be given the value 3/4=0.75. So we will say that anything under that is considered low mask-usage and anything above is considered high mask usage.  
+```{r}
+# First assign the high and low mask levels
+MaskData<- mutate(df,MaskLevel=cut(df$`Mask Usage`,c(0,.75,1))) %>% group_by(MaskLevel)
+
+```
+
+First we will create a boxplot of each population.
+```{r}
+boxplot(MaskData$`Infection Proportion`)
+outliers1 <- boxplot(MaskData$`Infection Proportion`, plot=FALSE)$out
+
+boxplot(MaskData$`Death Proportion`)
+outliers2 <- boxplot(MaskData$`Death Proportion`, plot=FALSE)$out
+```
+
+After removing outliers we get this.
+
+```{r}
+PrunedData1 <- MaskData
+PrunedData1 <- PrunedData1[-which(PrunedData1$'Infection Proportion' %in% outliers1),]
+boxplot(PrunedData1$`Infection Proportion`)
+
+PrunedData2 <- PrunedData1
+PrunedData2 <- PrunedData2[-which(PrunedData2$'Death Proportion' %in% outliers2),]
+boxplot(PrunedData2$`Death Proportion`)
+
+```
+We can then take a look at the five number summary of each population.
+
+```{r}
+print("Infection Proportion Five Number Summary")
+print("Min                First-Quartile    Median            Third-Quartile    Max                ")
+print(paste(min(MaskData$`Infection Proportion`),quantile(MaskData$`Infection Proportion`,0.25),median(MaskData$`Infection Proportion`),quantile(MaskData$`Infection Proportion`,0.75),max(MaskData$`Infection Proportion`)))
+print("")
+print("Death Proportion Five Number Summary")
+print("Min                First-Quartile    Median            Third-Quartile    Max                ")
+print(paste(format(round(min(MaskData$`Death Proportion`),16),nsmall=16),quantile(MaskData$`Death Proportion`,0.25),median(MaskData$`Death Proportion`),quantile(MaskData$`Death Proportion`,0.75),max(MaskData$`Death Proportion`)))
+```
+
+```{r}
+MaskData<-PrunedData2
+# Split into two different tables and ensure the column names have not changed
+MaskData1 <- split(MaskData,MaskData$MaskLevel)
+lowMaskPop<-data.frame(MaskData1[1])
+highMaskPop<-data.frame(MaskData1[2])
+names(lowMaskPop)<-names(df)
+names(highMaskPop)<-names(df)
+
+rows<-sample(nrow(lowMaskPop))
+lowMaskPop<- lowMaskPop[rows,]
+diff<-length(lowMaskPop$County)-length(highMaskPop$County)
+
+lowMaskPop<-head(lowMaskPop,-diff)
+#ignore some random counties so that the two populations have an equal number of observations
+```
+
+### Mann-Whitney Test (Mann-Whitney-Wilcoxon Test)
+First we must take into account some considerations. We can say that the two populations are independent, as the cases were reported December 19, 2021, when each county would have already had its own COVID-19 outbreak and the outbreak would be handled according to local guidelines as well as the guidelines of the state and United States government. Additionally, since we are dealing with proportions, the variable of interest is a continuous random variable and the measurement is the ratio scale. This also means both populations' distributions differ only with respect to location, if at all.  
+
+This allows us to perform the Mann-Whitney Test twice, once for Confirmed Cases and once for Deaths.  
+```{r}
+
+test.df <- data.frame(lowMaskPop$'Infection Proportion',highMaskPop$'Infection Proportion')
+colNames<-c("pop1","pop2")
+names(test.df)<-colNames
+testResults<-wilcox.test(test.df$pop1,test.df$pop2)
+
+print(testResults)
+
+```
+
+We see with a P-Value less than 2.2e-16, we must reject the null hypothesis and conclude that there is a significant difference in Infection Proportion between these two populations.
+
+Now we will look at the death proportion
+```{r}
+test.df2<- data.frame(lowMaskPop$'Death Proportion',highMaskPop$'Death Proportion')
+colNames<-c("pop1","pop2")
+names(test.df2)<-colNames
+testResults2<-wilcox.test(test.df2$pop1,test.df2$pop2)
+print(testResults2)
+```
+
+Again we see that the P-Value is extremely small, that is less than 2.2e-16, and so again we reject the null hypothesis and conclude that there is a significant difference in Death Proportion between these two populations.  
+
+
+### Point-Biserial Correlation Analysis
+Now we will determine whether or not there is a significant relationship between mask usage and the proportion of COVID-19 Infection as well as if there is a significant relationship between mask usage and the proportion of deaths.  
+
+For some considerations, our y values in this case are the proportions. Since we have almost 3000 different populations and therefore almost 3000 different sets of proportions (one proportion for infections, one for deaths) we can use Central Limit Theorem to say that these proportions are approximately normally distributed. Additionally, we again see that the proportions are continous random variables and are measured on the ratio scale. As for our other variable, we will let this be "If the county has a high mask usage". This means, if the mask usage is below 0.75 then this variable will be "low" and if it is 0.75 or above it will be "high". This makes our second variable of interest a dichotomous variable.
+
+With those considerations we can calculate the Point-Biserial Correlation coefficients.
+
+First, we will calculate the correlation between Mask Usage and Infection Proportion.
+```{r}
+# First we will add a binary column where 0 means the low group and 1 means the high group.
+MaskData$MaskGroup <- 1
+for(x in c(1:length(MaskData$`Infection Proportion`))){
+  if(MaskData[x,4]<0.75){
+    MaskData[x,8]<-0
+  }
+}
+
+# Now we perform the test
+corResults1<-cor.test(MaskData$MaskGroup,MaskData$`Infection Proportion`)
+print(corResults1)
+
+
+```
+Now we will calculate the correlation between Mask Usage and Death Proportion.
+```{r}
+corResults2<-cor.test(MaskData$MaskGroup,MaskData$`Death Proportion`)
+print(corResults2)
+```
+
+With those results in mind, we can look at the plot between the two variables.
+
+```{r}
+plotData <- MaskData
+names(plotData)<-c("FIPS_CODE","COUNTY","STATE","MASK_USAGE","INFECTION_PROP","DEATH_PROP","MASK_LEVEL","MASK_GROUP")
+
+ggplot(plotData, aes(x=MASK_USAGE,y=INFECTION_PROP)) + 
+  geom_point(size=1)+
+  geom_smooth(method=lm,se=FALSE) +
+  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
+  scale_y_continuous(name="Infection Proportion",limits = c(0,0.6)) +
+  ggtitle("Mask Usage vs Infection Proportion")
+
+ggplot(plotData, aes(x=MASK_USAGE,y=DEATH_PROP)) + 
+  geom_point(size=1)+
+  geom_smooth(method=lm,se=FALSE) +
+  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
+  scale_y_continuous(name="Death Proportion",limits = c(0,0.01)) +
+  ggtitle("Mask Usage vs Death Proportion")
+```
+
+### Cox Stuart Trend Analysis
+Here we can order the data and see if there is an upwards or downwards trend in Infection Proportion and Death Proportion as Mask Usage increases. We will order the data starting from the lowest Mask Usage to the highest. Again, we know that the measurements are all on the ratio scale.
+
+```{r}
+sorted_data <- MaskData[order(MaskData$'Mask Usage'),]
+cox.stuart.test(sorted_data$`Infection Proportion`,alternative = "left.sided")
+```
+
+With this test we see that with the P-Value being so low in this left-sided test, that is less than 2.2e-16, we must reject the null hypothesis and conclude that there is a decreasing trend in Infection Proportions as Mask Usage increases.
+
+```{r}
+cox.stuart.test(sorted_data$`Death Proportion`,alternative = "left.sided")
+```
+
+With this test we see that with the P-Value being so low in this left-sided test, that is less than 2.2e-16, we must reject the null hypothesis and conclude that there is a decreasing trend in Death Proportions as Mask Usage increases.
