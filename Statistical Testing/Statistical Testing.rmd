@@ -33,23 +33,26 @@ MaskData<- mutate(df,MaskLevel=cut(df$`Mask Usage`,c(0,.75,1))) %>% group_by(Mas
 
 First we will create a boxplot of each population.
 ```{r}
-boxplot(MaskData$`Infection Proportion`)
+boxplot(MaskData$`Infection Proportion`,main="Boxplot of Reported Infection Proportions",
+        ylab="Total COVID-19 Cases Divided by County Population")
 outliers1 <- boxplot(MaskData$`Infection Proportion`, plot=FALSE)$out
 
-boxplot(MaskData$`Death Proportion`)
+boxplot(MaskData$`Death Proportion`,main="Boxplot of Reported Death Proportions",
+        ylab="Total COVID-19 Deaths Divided by County Population")
 outliers2 <- boxplot(MaskData$`Death Proportion`, plot=FALSE)$out
 ```
-
 After removing outliers we get this.
 
 ```{r}
 PrunedData1 <- MaskData
 PrunedData1 <- PrunedData1[-which(PrunedData1$'Infection Proportion' %in% outliers1),]
-boxplot(PrunedData1$`Infection Proportion`)
+boxplot(PrunedData1$`Infection Proportion`,main="Boxplot of Reported Infection Proportions",
+        ylab="Total COVID-19 Cases Divided by County Population")
 
 PrunedData2 <- PrunedData1
 PrunedData2 <- PrunedData2[-which(PrunedData2$'Death Proportion' %in% outliers2),]
-boxplot(PrunedData2$`Death Proportion`)
+boxplot(PrunedData2$`Death Proportion`,main="Boxplot of Reported Death Proportions",
+        ylab="Total COVID-19 Deaths Divided by County Population")
 
 ```
 We can then take a look at the five number summary of each population.
@@ -57,11 +60,19 @@ We can then take a look at the five number summary of each population.
 ```{r}
 print("Infection Proportion Five Number Summary")
 print("Min                First-Quartile    Median            Third-Quartile    Max                ")
-print(paste(min(MaskData$`Infection Proportion`),quantile(MaskData$`Infection Proportion`,0.25),median(MaskData$`Infection Proportion`),quantile(MaskData$`Infection Proportion`,0.75),max(MaskData$`Infection Proportion`)))
+print(paste(min(MaskData$`Infection Proportion`),
+            quantile(MaskData$`Infection Proportion`,0.25),
+            median(MaskData$`Infection Proportion`),
+            quantile(MaskData$`Infection Proportion`,0.75),
+            max(MaskData$`Infection Proportion`)))
 print("")
 print("Death Proportion Five Number Summary")
 print("Min                First-Quartile    Median            Third-Quartile    Max                ")
-print(paste(format(round(min(MaskData$`Death Proportion`),16),nsmall=16),quantile(MaskData$`Death Proportion`,0.25),median(MaskData$`Death Proportion`),quantile(MaskData$`Death Proportion`,0.75),max(MaskData$`Death Proportion`)))
+print(paste(format(round(min(MaskData$`Death Proportion`),16),nsmall=16),
+            quantile(MaskData$`Death Proportion`,0.25),
+            median(MaskData$`Death Proportion`),
+            quantile(MaskData$`Death Proportion`,0.75),
+            max(MaskData$`Death Proportion`)))
 ```
 
 ```{r}
@@ -79,6 +90,8 @@ diff<-length(lowMaskPop$County)-length(highMaskPop$County)
 
 lowMaskPop<-head(lowMaskPop,-diff)
 #ignore some random counties so that the two populations have an equal number of observations
+plotData <- MaskData
+names(plotData)<-c("FIPS_CODE","COUNTY","STATE","MASK_USAGE","INFECTION_PROP","DEATH_PROP","MASK_LEVEL")
 ```
 
 ### Mann-Whitney Test (Mann-Whitney-Wilcoxon Test)
@@ -113,7 +126,7 @@ Again we see that the P-Value is extremely small, that is less than 2.2e-16, and
 ### Point-Biserial Correlation Analysis
 Now we will determine whether or not there is a significant relationship between mask usage and the proportion of COVID-19 Infection as well as if there is a significant relationship between mask usage and the proportion of deaths.  
 
-For some considerations, our y values in this case are the proportions. Since we have almost 3000 different populations and therefore almost 3000 different sets of proportions (one proportion for infections, one for deaths) we can use Central Limit Theorem to say that these proportions are approximately normally distributed. Additionally, we again see that the proportions are continous random variables and are measured on the ratio scale. As for our other variable, we will let this be "If the county has a high mask usage". This means, if the mask usage is below 0.75 then this variable will be "low" and if it is 0.75 or above it will be "high". This makes our second variable of interest a dichotomous variable.
+For some considerations, our y values in this case are the proportions. Since we have almost 3000 different populations and therefore almost 3000 different sets of proportions (one proportion for infections, one for deaths) we can use Central Limit Theorem to say that these proportions are approximately normally distributed. Additionally, we again see that the proportions are continuous  random variables and are measured on the ratio scale. As for our other variable, we will let this be "If the county has a high mask usage". This means, if the mask usage is below 0.75 then this variable will be "low" and if it is 0.75 or above it will be "high". This makes our second variable of interest a dichotomous variable.
 
 With those considerations we can calculate the Point-Biserial Correlation coefficients.
 
@@ -133,6 +146,8 @@ print(corResults1)
 
 
 ```
+
+
 Now we will calculate the correlation between Mask Usage and Death Proportion.
 ```{r}
 corResults2<-cor.test(MaskData$MaskGroup,MaskData$`Death Proportion`)
@@ -142,22 +157,18 @@ print(corResults2)
 With those results in mind, we can look at the plot between the two variables.
 
 ```{r}
-plotData <- MaskData
-names(plotData)<-c("FIPS_CODE","COUNTY","STATE","MASK_USAGE","INFECTION_PROP","DEATH_PROP","MASK_LEVEL","MASK_GROUP")
-
-ggplot(plotData, aes(x=MASK_USAGE,y=INFECTION_PROP)) + 
+ggplot(plotData, aes(x=MASK_LEVEL,y=INFECTION_PROP)) + 
   geom_point(size=1)+
   geom_smooth(method=lm,se=FALSE) +
-  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
+  scale_x_discrete(name="Mask Level")+
   scale_y_continuous(name="Infection Proportion",limits = c(0,0.6)) +
-  ggtitle("Mask Usage vs Infection Proportion")
-
-ggplot(plotData, aes(x=MASK_USAGE,y=DEATH_PROP)) + 
+  ggtitle("Mask Level vs Infection Proportion")
+ggplot(plotData, aes(x=MASK_LEVEL,y=DEATH_PROP)) + 
   geom_point(size=1)+
   geom_smooth(method=lm,se=FALSE) +
-  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
-  scale_y_continuous(name="Death Proportion",limits = c(0,0.01)) +
-  ggtitle("Mask Usage vs Death Proportion")
+  scale_x_discrete(name="Mask Level")+
+  scale_y_continuous(name="Infection Proportion",limits = c(0,0.01)) +
+  ggtitle("Mask Level vs Infection Proportion")
 ```
 
 ### Cox Stuart Trend Analysis
@@ -175,3 +186,22 @@ cox.stuart.test(sorted_data$`Death Proportion`,alternative = "left.sided")
 ```
 
 With this test we see that with the P-Value being so low in this left-sided test, that is less than 2.2e-16, we must reject the null hypothesis and conclude that there is a decreasing trend in Death Proportions as Mask Usage increases.
+
+Graphing the variables on a scatterplot and adding a line of best fit we can see the trend described by this test.
+
+```{r}
+
+ggplot(plotData, aes(x=MASK_USAGE,y=INFECTION_PROP)) + 
+  geom_point(size=1)+
+  geom_smooth(method=lm,se=FALSE) +
+  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
+  scale_y_continuous(name="Infection Proportion",limits = c(0,0.6)) +
+  ggtitle("Mask Usage vs Infection Proportion")
+
+ggplot(plotData, aes(x=MASK_USAGE,y=DEATH_PROP)) + 
+  geom_point(size=1)+
+  geom_smooth(method=lm,se=FALSE) +
+  scale_x_continuous(name="Mask Usage",limits = c(0,1))+
+  scale_y_continuous(name="Death Proportion",limits = c(0,0.01)) +
+  ggtitle("Mask Usage vs Death Proportion")
+```
