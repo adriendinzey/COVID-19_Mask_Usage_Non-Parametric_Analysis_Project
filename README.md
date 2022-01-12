@@ -1,4 +1,4 @@
-# COVID-19_Mask_Usage_Non-Parametric_Analysis_Project
+# COVID-19 Mask Usage Non-Parametric Analysis Project
 ## About
 A project uses Non-Parametric Statistical methods to determine what relationship, if any, mask usage has on COVID-19 Infection.
 
