@@ -167,8 +167,8 @@ ggplot(plotData, aes(x=MASK_LEVEL,y=DEATH_PROP)) +
   geom_point(size=1)+
   geom_smooth(method=lm,se=FALSE) +
   scale_x_discrete(name="Mask Level")+
-  scale_y_continuous(name="Infection Proportion",limits = c(0,0.01)) +
-  ggtitle("Mask Level vs Infection Proportion")
+  scale_y_continuous(name="Death Proportion",limits = c(0,0.01)) +
+  ggtitle("Mask Level vs Death Proportion")
 ```
 
 ### Cox Stuart Trend Analysis
