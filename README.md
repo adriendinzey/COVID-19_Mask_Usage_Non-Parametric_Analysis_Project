@@ -6,7 +6,7 @@ Data is loaded and cleaned, the data then undergoes a Mann-Whitney-Wilcoxon test
 
 Uses an r script to process the data and an r markdown file to generate the results.
 
-This project was created for the course STAT 3380 at the University of Manitoba and is yet to be graded.
+This project was created for the course STAT 3380 at the University of Manitoba.
 
 ## How to run
 1. Clone the repository 
