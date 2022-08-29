@@ -1,4 +1,7 @@
 # COVID-19 Mask Usage Non-Parametric Analysis Project
+
+[View Final Report](https://github.com/adriendinzey/COVID-19_Mask_Usage_Non-Parametric_Analysis_Project/blob/main/Documents/Final%20Report.pdf)
+
 ## About
 A project uses Non-Parametric Statistical methods to determine what relationship, if any, mask usage has on COVID-19 Infection.
 
